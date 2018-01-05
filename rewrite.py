@@ -24,14 +24,14 @@ class Context:
         self.bot = bot
 
     async def send(self, msg:str, **kwargs):
-        await self.bot.say(self.channel, msg, **kwargs)
+        await self.channel.send(msg, **kwargs)
 
 class Command:
     'Generic command class to run commands from.'
     def __init__(self, func, **kwargs):
         self.name = kwargs.name if hasattr(kwargs, 'name') else func.__name__
         self.description = kwargs.desc if hasattr(kwargs, 'desc') else None
-        self.__call__ = func # set the caller to this
+        self.invoke = func # set the caller to this
 
 
 class Hana(discord.Client):
@@ -48,8 +48,10 @@ class Hana(discord.Client):
             for i in self.prefix:
                 if msg.content.startswith(i):
                     current_prefix = i
-            cmd = msg.content[len(i):].split(' ')[0]
-            args = msg.content[len(i):].split(' ')[1:]
+            print(current_prefix)
+            print(len(current_prefix))
+            cmd = msg.content[len(current_prefix):].split(' ')[0]
+            args = msg.content[len(current_prefix):].split(' ')[1:]
             print(f'{cmd}, {args}')
             print(self.commands)
             await self.process_commands(msg, cmd, args)
@@ -58,15 +60,15 @@ class Hana(discord.Client):
         if cmd not in self.commands.keys():
             raise InvalidCommand()
         try:
-            await self.commands[cmd](Context(self, cmd, msg, args))
+            await self.commands[cmd].invoke(Context(self, cmd, msg, args))
         except Exception as e:
             await self.dispatch('command_error', e)
         
     async def on_ready(self):
         print('Hana ready!')
              
-    def command(self, func):
-        def func_wrapper(**kwargs):
+    def command(self, **kwargs):
+        def func_wrapper(func):
             print('it ran')
             self.add_command(func, **kwargs)
         return func_wrapper
@@ -80,7 +82,7 @@ class Hana(discord.Client):
 
 hana = Hana()
 
-@hana.command
+@hana.command()
 async def ping(ctx):
     await ctx.send('Pong.')
 
